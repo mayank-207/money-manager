@@ -4,6 +4,7 @@ import { Transaction } from '../../types';
 import { formatCurrency, formatDate } from '../../utils/helpers';
 import Button from '../ui/Button';
 import { Link } from 'react-router-dom';
+import { CategoryIcon, PaytmIcon, BHIMIcon } from '../../utils/categoryIcons';
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -147,6 +148,7 @@ const TransactionList: React.FC<TransactionListProps> = ({ transactions, onDelet
                 <th className="text-left py-3 px-4 text-sm font-semibold text-[#1D1D1F] border-b border-[#E5E5EA]">Category</th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-[#1D1D1F] border-b border-[#E5E5EA]">Description</th>
                 <th className="text-right py-3 px-4 text-sm font-semibold text-[#1D1D1F] border-b border-[#E5E5EA]">Amount</th>
+                <th className="text-right py-3 px-4 text-sm font-semibold text-[#1D1D1F] border-b border-[#E5E5EA]">Payment</th>
                 <th className="text-right py-3 px-4 text-sm font-semibold text-[#1D1D1F] border-b border-[#E5E5EA]">Actions</th>
               </tr>
             </thead>
@@ -176,12 +178,25 @@ const TransactionList: React.FC<TransactionListProps> = ({ transactions, onDelet
                     </div>
                   </td>
                   <td className="py-4 px-4 text-sm text-[#1D1D1F]">{formatDate(transaction.date)}</td>
-                  <td className="py-4 px-4 text-sm text-[#1D1D1F]">{transaction.category}</td>
+                  <td className="py-4 px-4">
+                    <div className="flex items-center space-x-3">
+                      <CategoryIcon category={transaction.category} size={20} />
+                      <span className="text-sm text-[#1D1D1F]">{transaction.category}</span>
+                    </div>
+                  </td>
                   <td className="py-4 px-4 text-sm text-[#1D1D1F]">{transaction.description}</td>
                   <td className={`py-4 px-4 text-sm font-medium text-right ${
                     transaction.type === 'income' ? 'text-[#30D158]' : 'text-[#FF453A]'
                   }`}>
                     {transaction.type === 'income' ? '+' : '-'} {formatCurrency(transaction.amount)}
+                  </td>
+                  <td className="py-4 px-4 text-right">
+                    <div className="flex justify-center">
+                      {/* Payment method indicator - you can extend this based on your transaction data */}
+                      <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center">
+                        <span className="text-gray-600 text-xs font-medium">•</span>
+                      </div>
+                    </div>
                   </td>
                   <td className="py-4 px-4 text-right">
                     <div className="flex justify-end space-x-2">

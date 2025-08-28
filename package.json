@@ -9,6 +9,8 @@
     "@react-spring/web": "^9.7.3",
     "@react-three/drei": "^9.92.7",
     "@react-three/fiber": "^8.15.12",
+    "@types/node": "^24.3.0",
+    "axios": "^1.11.0",
     "framer-motion": "^12.11.0",
     "lucide-react": "^0.510.0",
     "react": "^18.2.0",
