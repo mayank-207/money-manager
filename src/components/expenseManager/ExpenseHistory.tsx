@@ -1,5 +1,5 @@
 import React from 'react';
-import { DollarSign, TrendingUp, TrendingDown, CheckCircle, Circle } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, CircleCheck as CheckCircle, Circle } from 'lucide-react';
 import { SharedExpense } from '../../types';
 import Card from '../ui/Card';
 

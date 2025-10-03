@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, UserPlus, PlusCircle, History, ArrowLeft } from 'lucide-react';
+import { Users, UserPlus, CirclePlus as PlusCircle, History, ArrowLeft } from 'lucide-react';
 import Layout from '../components/layout/Layout';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
