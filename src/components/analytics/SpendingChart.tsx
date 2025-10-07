@@ -29,7 +29,7 @@ const SpendingChart: React.FC<SpendingChartProps> = ({ transactions }) => {
     return (
       <Card title="Monthly Spending">
         <div className="text-center py-8">
-          <p className="text-[#86868B]">No spending data available yet.</p>
+          <p className="text-[#86868B]">No data yet. Add transactions to see insights.</p>
         </div>
       </Card>
     );

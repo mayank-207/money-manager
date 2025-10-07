@@ -20,9 +20,10 @@ const RecentTransactions: React.FC<RecentTransactionsProps> = ({ transactions })
     return (
       <Card title="Recent Transactions">
         <div className="text-center py-8">
-          <p className="text-[#86868B] mb-4">No transactions yet.</p>
+          <p className="text-[#86868B] mb-2">No recent transactions.</p>
+          <p className="text-[#86868B] mb-4">Add your first transaction to get insights.</p>
           <Link to="/transactions">
-            <Button variant="primary">Add Transaction</Button>
+            <Button variant="primary">Add transaction</Button>
           </Link>
         </div>
       </Card>
@@ -76,7 +77,7 @@ const RecentTransactions: React.FC<RecentTransactionsProps> = ({ transactions })
       
       <div className="mt-4 pt-4 border-t border-[#F5F5F7]">
         <Link to="/transactions">
-          <Button variant="outline" fullWidth>View All Transactions</Button>
+          <Button variant="outline" fullWidth>View all transactions</Button>
         </Link>
       </div>
     </Card>

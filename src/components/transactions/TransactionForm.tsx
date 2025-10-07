@@ -57,19 +57,19 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
     const newErrors: typeof errors = {};
     
     if (!formData.amount || formData.amount <= 0) {
-      newErrors.amount = 'Please enter a valid amount';
+      newErrors.amount = 'Enter an amount greater than 0 (e.g., 45.99).';
     }
     
     if (!formData.date) {
-      newErrors.date = 'Please select a date';
+      newErrors.date = 'Select the transaction date.';
     }
     
     if (!formData.category) {
-      newErrors.category = 'Please select a category';
+      newErrors.category = 'Choose a category.';
     }
     
     if (!formData.description.trim()) {
-      newErrors.description = 'Please enter a description';
+      newErrors.description = 'Add a short description.';
     }
     
     if (Object.keys(newErrors).length > 0) {
@@ -102,6 +102,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
                 : 'text-[#86868B] hover:text-[#1D1D1F]'
             }`}
             onClick={() => handleTypeChange('expense')}
+            aria-label="Set transaction type to expense"
           >
             Expense
           </button>
@@ -113,10 +114,12 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
                 : 'text-[#86868B] hover:text-[#1D1D1F]'
             }`}
             onClick={() => handleTypeChange('income')}
+            aria-label="Set transaction type to income"
           >
             Income
           </button>
         </div>
+        <p className="text-xs text-[#86868B] mt-2">Choose the transaction type.</p>
       </div>
       
       <div className="space-y-4">
@@ -141,6 +144,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
               placeholder="0.00"
             />
           </div>
+          <p className="mt-1 text-xs text-[#86868B]">Positive numbers only; use a decimal for cents.</p>
           {errors.amount && <p className="mt-1 text-sm text-[#FF453A]">{errors.amount}</p>}
         </div>
         
@@ -158,6 +162,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
               errors.date ? 'border-[#FF453A]' : 'border-[#E5E5EA]'
             }`}
           />
+          <p className="mt-1 text-xs text-[#86868B]">This should match the receipt date.</p>
           {errors.date && <p className="mt-1 text-sm text-[#FF453A]">{errors.date}</p>}
         </div>
         
@@ -180,6 +185,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
               </option>
             ))}
           </select>
+          <p className="mt-1 text-xs text-[#86868B]">Choose the best fit. You can change it later.</p>
           {errors.category && <p className="mt-1 text-sm text-[#FF453A]">{errors.category}</p>}
         </div>
         
@@ -196,8 +202,9 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
             className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#0A84FF] focus:border-[#0A84FF] ${
               errors.description ? 'border-[#FF453A]' : 'border-[#E5E5EA]'
             }`}
-            placeholder="What was this transaction for?"
+            placeholder="What was this for? (e.g., ‘Coffee at Blue Bottle’)"
           />
+          <p className="mt-1 text-xs text-[#86868B]">Details help you search later.</p>
           {errors.description && <p className="mt-1 text-sm text-[#FF453A]">{errors.description}</p>}
         </div>
       </div>
@@ -207,7 +214,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
           Cancel
         </Button>
         <Button type="submit" variant={formData.type === 'income' ? 'success' : 'primary'}>
-          {isEditing ? 'Update' : 'Save'} {formData.type === 'income' ? 'Income' : 'Expense'}
+          {isEditing ? 'Update transaction' : 'Save transaction'}
         </Button>
       </div>
     </form>

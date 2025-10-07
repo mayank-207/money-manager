@@ -17,7 +17,7 @@ const TransactionList: React.FC<TransactionListProps> = ({ transactions, onDelet
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   const handleDelete = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this transaction?')) {
+    if (window.confirm('Delete this transaction? You can\'t undo this.')) {
       onDelete(id);
     }
   };
@@ -57,7 +57,7 @@ const TransactionList: React.FC<TransactionListProps> = ({ transactions, onDelet
           <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#86868B]" />
           <input
             type="text"
-            placeholder="Search transactions..."
+            placeholder="Search by description or category"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-3 py-2 border border-[#E5E5EA] rounded-lg focus:ring-2 focus:ring-[#0A84FF] focus:border-[#0A84FF]"
@@ -81,7 +81,7 @@ const TransactionList: React.FC<TransactionListProps> = ({ transactions, onDelet
                   }`}
                   onClick={() => setFilter('all')}
                 >
-                  All Transactions
+                  All transactions
                 </button>
                 <button
                   className={`w-full text-left px-3 py-2 rounded-md text-sm ${
@@ -89,7 +89,7 @@ const TransactionList: React.FC<TransactionListProps> = ({ transactions, onDelet
                   }`}
                   onClick={() => setFilter('income')}
                 >
-                  Income Only
+                  Income only
                 </button>
                 <button
                   className={`w-full text-left px-3 py-2 rounded-md text-sm ${
@@ -97,7 +97,7 @@ const TransactionList: React.FC<TransactionListProps> = ({ transactions, onDelet
                   }`}
                   onClick={() => setFilter('expense')}
                 >
-                  Expenses Only
+                  Expenses only
                 </button>
               </div>
             </div>
@@ -122,19 +122,19 @@ const TransactionList: React.FC<TransactionListProps> = ({ transactions, onDelet
             }}
             className="px-3 py-2 bg-white border border-[#E5E5EA] rounded-lg text-sm font-medium"
           >
-            <option value="date-desc">Latest First</option>
-            <option value="date-asc">Oldest First</option>
-            <option value="amount-desc">Highest Amount</option>
-            <option value="amount-asc">Lowest Amount</option>
+            <option value="date-desc">Newest first</option>
+            <option value="date-asc">Oldest first</option>
+            <option value="amount-desc">Amount: high to low</option>
+            <option value="amount-asc">Amount: low to high</option>
           </select>
         </div>
       </div>
       
       {filteredTransactions.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-lg border border-[#E5E5EA]">
-          <p className="text-[#86868B] mb-4">No transactions found.</p>
+          <p className="text-[#86868B] mb-4">No matches. Try a different search or filter.</p>
           <Link to="/transactions/new">
-            <Button variant="primary">Add Transaction</Button>
+            <Button variant="primary">Add transaction</Button>
           </Link>
         </div>
       ) : (
@@ -212,7 +212,7 @@ const TransactionList: React.FC<TransactionListProps> = ({ transactions, onDelet
             Showing {filteredTransactions.length} of {transactions.length} transactions
           </p>
           <Link to="/transactions/new">
-            <Button variant="primary">Add Transaction</Button>
+            <Button variant="primary">Add transaction</Button>
           </Link>
         </div>
       )}

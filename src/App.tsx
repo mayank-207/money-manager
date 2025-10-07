@@ -7,6 +7,7 @@ import Transactions from './pages/Transactions';
 import NewTransaction from './pages/NewTransaction';
 import EditTransaction from './pages/EditTransaction';
 import Analytics from './pages/Analytics';
+import Reports from './pages/Reports';
 import ExpenseManager from './pages/ExpenseManager';
 
 function App() {
@@ -20,6 +21,7 @@ function App() {
             <Route path="/transactions/new" element={<NewTransaction />} />
             <Route path="/transactions/edit/:id" element={<EditTransaction />} />
             <Route path="/analytics" element={<Analytics />} />
+            <Route path="/reports" element={<Reports />} />
             <Route path="/expense-manager" element={<ExpenseManager />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

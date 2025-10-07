@@ -1,7 +1,11 @@
 {
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "dev": "concurrently \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:client": "vite",
+    "dev:server": "npm --prefix server run dev",
+    "build": "npm run build:client && npm run build:server",
+    "build:client": "vite build",
+    "build:server": "npm --prefix server run build",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -17,6 +21,7 @@
     "three": "^0.160.0"
   },
   "devDependencies": {
+    "concurrently": "^8.2.2",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@vitejs/plugin-react": "^4.4.1",

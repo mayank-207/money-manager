@@ -6,29 +6,29 @@ import { Link } from 'react-router-dom';
 const QuickActions: React.FC = () => {
   const actions = [
     {
-      title: 'Add Transaction',
+      title: 'Add transaction',
       icon: <Plus size={20} />,
       color: '#0A84FF',
       link: '/transactions/new',
     },
     {
-      title: 'View Transactions',
+      title: 'View transactions',
       icon: <ArrowUpDown size={20} />,
       color: '#30D158',
       link: '/transactions',
     },
     {
-      title: 'View Analytics',
+      title: 'View analytics',
       icon: <PieChart size={20} />,
       color: '#5E5CE6',
       link: '/analytics',
     },
     {
-      title: 'Export Data',
+      title: 'Export data',
       icon: <Download size={20} />,
       color: '#FF9F0A',
       link: '#',
-      onClick: () => alert('Export functionality would be implemented here'),
+      onClick: () => alert('Export feature is coming soon.'),
     },
   ];
 

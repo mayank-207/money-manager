@@ -34,7 +34,7 @@ const CategoryBreakdown: React.FC<CategoryBreakdownProps> = ({ transactions }) =
     return (
       <Card title="Category Breakdown">
         <div className="text-center py-8">
-          <p className="text-[#86868B]">No spending data available yet.</p>
+          <p className="text-[#86868B]">No data yet. Add transactions to see insights.</p>
         </div>
       </Card>
     );

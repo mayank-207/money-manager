@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "server/src/index.ts", "use": "@vercel/node", "config": { "includeFiles": ["server/**"] } },
+    { "src": "index.html", "use": "@vercel/static-build", "config": { "distDir": "dist" } }
+  ],
+  "routes": [
+    { "src": "/graphql", "dest": "/server/src/index.ts" },
+    { "src": "/api/(.*)", "dest": "/server/src/index.ts" },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ]
+}
+
+

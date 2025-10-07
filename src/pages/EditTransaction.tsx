@@ -25,8 +25,8 @@ const EditTransaction: React.FC = () => {
   return (
     <Layout>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-[#1D1D1F]">Edit Transaction</h1>
-        <p className="text-[#86868B] mt-1">Update transaction details</p>
+        <h1 className="text-3xl font-bold text-[#1D1D1F]">Edit transaction</h1>
+        <p className="text-[#86868B] mt-1">Edit this transaction</p>
       </div>
       
       <div className="bg-white rounded-xl shadow-sm p-6 max-w-2xl">

@@ -28,6 +28,7 @@ const Header: React.FC = () => {
     { path: '/', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
     { path: '/transactions', label: 'Transactions', icon: <Receipt size={18} /> },
     { path: '/analytics', label: 'Analytics', icon: <BarChart3 size={18} /> },
+    { path: '/reports', label: 'Reports', icon: <BarChart3 size={18} /> },
     { path: '/expense-manager', label: 'Expense Manager', icon: <Users size={18} /> },
   ];
 
@@ -72,7 +73,7 @@ const Header: React.FC = () => {
               aria-expanded={isMenuOpen}
               onClick={toggleMenu}
             >
-              <span className="sr-only">Open main menu</span>
+              <span className="sr-only">{isMenuOpen ? 'Close menu' : 'Open menu'}</span>
               {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
           </div>
