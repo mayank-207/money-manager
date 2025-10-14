@@ -6,6 +6,18 @@ export const initializeDatabase = async () => {
   try {
     console.log('🔄 Initializing database tables...');
 
+    // Create users table
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     // Create participants table
     await db.query(`
       CREATE TABLE IF NOT EXISTS participants (
@@ -82,6 +94,7 @@ export const dropTables = async () => {
     await db.query('DROP TABLE IF EXISTS group_members CASCADE');
     await db.query('DROP TABLE IF EXISTS groups CASCADE');
     await db.query('DROP TABLE IF EXISTS participants CASCADE');
+    await db.query('DROP TABLE IF EXISTS users CASCADE');
     
     console.log('✅ All tables dropped successfully');
   } catch (error) {

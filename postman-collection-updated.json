@@ -1,0 +1,194 @@
+{
+  "info": {
+    "name": "Money Manager API (DB Version)",
+    "description": "Postman collection for Money Manager backend with database integration and authentication.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:4000", "type": "string" },
+    { "key": "authToken", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "auth", "register"] },
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "exec": [
+                    "if (pm.response.code === 201) {",
+                    "    var jsonData = pm.response.json();",
+                    "    if (jsonData.token) {",
+                    "        pm.collectionVariables.set('authToken', jsonData.token);",
+                    "        console.log('Auth token saved:', jsonData.token);",
+                    "    }",
+                    "}"
+                  ],
+                  "type": "text/javascript"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "name": "Login User",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] },
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "exec": [
+                    "if (pm.response.code === 200) {",
+                    "    var jsonData = pm.response.json();",
+                    "    if (jsonData.token) {",
+                    "        pm.collectionVariables.set('authToken', jsonData.token);",
+                    "        console.log('Auth token saved:', jsonData.token);",
+                    "    }",
+                    "}"
+                  ],
+                  "type": "text/javascript"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "name": "Get User Profile",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "url": { "raw": "{{baseUrl}}/api/auth/profile", "host": ["{{baseUrl}}"], "path": ["api", "auth", "profile"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Participants",
+      "item": [
+        {
+          "name": "Create Participant",
+          "request": {
+            "method": "POST",
+            "header": [ 
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Alice Smith\",\n  \"email\": \"alice@example.com\",\n  \"mobile\": \"+1234567890\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/participants", "host": ["{{baseUrl}}"], "path": ["api", "participants"] }
+          }
+        },
+        {
+          "name": "Get All Participants",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "url": { "raw": "{{baseUrl}}/api/participants", "host": ["{{baseUrl}}"], "path": ["api", "participants"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Groups",
+      "item": [
+        {
+          "name": "Create Group (with members)",
+          "request": {
+            "method": "POST",
+            "header": [ 
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Weekend Trip\",\n  \"description\": \"Group for trip\",\n  \"memberIds\": [1,2]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/groups", "host": ["{{baseUrl}}"], "path": ["api", "groups"] }
+          }
+        },
+        {
+          "name": "Get All Groups",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "url": { "raw": "{{baseUrl}}/api/groups", "host": ["{{baseUrl}}"], "path": ["api", "groups"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Expenses",
+      "item": [
+        {
+          "name": "Create Expense",
+          "request": {
+            "method": "POST",
+            "header": [ 
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{authToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 50.00,\n  \"description\": \"Dinner at restaurant\",\n  \"category\": \"Food\",\n  \"groupId\": 1,\n  \"paidBy\": 1,\n  \"splitBetween\": [1,2],\n  \"date\": \"2025-10-13\",\n  \"type\": \"expense\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/expenses", "host": ["{{baseUrl}}"], "path": ["api", "expenses"] }
+          }
+        },
+        {
+          "name": "Get All Expenses",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "url": { "raw": "{{baseUrl}}/api/expenses", "host": ["{{baseUrl}}"], "path": ["api", "expenses"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reports",
+      "item": [
+        {
+          "name": "Get Summary Report",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "url": { "raw": "{{baseUrl}}/api/reports/summary", "host": ["{{baseUrl}}"], "path": ["api", "reports", "summary"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Analytics",
+      "item": [
+        {
+          "name": "Get Trends",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "url": { "raw": "{{baseUrl}}/api/analytics/trends", "host": ["{{baseUrl}}"], "path": ["api", "analytics", "trends"] }
+          }
+        }
+      ]
+    }
+  ]
+}

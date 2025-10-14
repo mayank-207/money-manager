@@ -1,16 +1,82 @@
 import { IResolvers } from '@graphql-tools/utils';
+import bcrypt from 'bcrypt';
+import { sign, verify, SignOptions } from 'jsonwebtoken';
+import { GraphQLError } from 'graphql';
 import Database from '../config/database';
+
+// JWT Configuration
+const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
+const JWT_EXPIRE = process.env.JWT_EXPIRE || '7d';
+const SALT_ROUNDS = 10;
+
+// Helper function to get user from context
+const getUser = (context: any) => {
+  const authHeader = context.req?.headers?.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return null;
+  }
+  
+  const token = authHeader.substring(7);
+  try {
+    const decoded = verify(token, JWT_SECRET) as any;
+    return decoded;
+  } catch (error) {
+    return null;
+  }
+};
+
+// Helper function to require authentication
+const requireAuth = (context: any) => {
+  const user = getUser(context);
+  if (!user) {
+    throw new GraphQLError('Authentication required', {
+      extensions: { code: 'UNAUTHENTICATED' }
+    });
+  }
+  return user;
+};
 
 const db = Database.getInstance();
 
 export const resolvers: IResolvers = {
   Query: {
-    participants: async () => {
+    me: async (_: any, __: any, context: any) => {
+      const user = getUser(context);
+      if (!user) return null;
+      
+      const result = await db.query(
+        'SELECT id, name, email, created_at FROM users WHERE id = $1',
+        [user.userId]
+      );
+      
+      if (result.rows.length === 0) return null;
+      
+      const userData = result.rows[0];
+      return {
+        id: userData.id,
+        name: userData.name,
+        email: userData.email,
+        createdAt: userData.created_at
+      };
+    },
+
+    participants: async (_: any, __: any, context: any) => {
+      requireAuth(context);
       const result = await db.query('SELECT * FROM participants ORDER BY created_at DESC');
       return result.rows;
     },
+
+    participant: async (_: any, { id }: any, context: any) => {
+      requireAuth(context);
+      const result = await db.query('SELECT * FROM participants WHERE id = $1', [id]);
+      if (result.rows.length === 0) {
+        throw new GraphQLError('Participant not found');
+      }
+      return result.rows[0];
+    },
     
-    groups: async () => {
+    groups: async (_: any, __: any, context: any) => {
+      requireAuth(context);
       const result = await db.query(`
         SELECT g.*, 
                COALESCE(
@@ -27,8 +93,32 @@ export const resolvers: IResolvers = {
       `);
       return result.rows;
     },
+
+    group: async (_: any, { id }: any, context: any) => {
+      requireAuth(context);
+      const result = await db.query(`
+        SELECT g.*, 
+               COALESCE(
+                 json_agg(
+                   json_build_object('id', p.id, 'name', p.name, 'email', p.email, 'mobile', p.mobile)
+                 ) FILTER (WHERE p.id IS NOT NULL), 
+                 '[]'
+               ) as members
+        FROM groups g
+        LEFT JOIN group_members gm ON g.id = gm.group_id
+        LEFT JOIN participants p ON gm.participant_id = p.id
+        WHERE g.id = $1
+        GROUP BY g.id
+      `, [id]);
+      
+      if (result.rows.length === 0) {
+        throw new GraphQLError('Group not found');
+      }
+      return result.rows[0];
+    },
     
-    expenses: async (_: any, args: any) => {
+    expenses: async (_: any, args: any, context: any) => {
+      requireAuth(context);
       const { groupId, participantId, from, to } = args;
       let query = `
         SELECT e.*, 
@@ -123,14 +213,270 @@ export const resolvers: IResolvers = {
         balance: parseFloat(row.total_income) - parseFloat(row.total_expense)
       };
     },
+
+    expense: async (_: any, { id }: any, context: any) => {
+      requireAuth(context);
+      const result = await db.query(`
+        SELECT e.*, 
+               json_agg(
+                 json_build_object(
+                   'participant', json_build_object('id', p.id, 'name', p.name, 'email', p.email),
+                   'amount', es.amount,
+                   'settled', es.settled
+                 )
+               ) as splits
+        FROM expenses e
+        LEFT JOIN expense_splits es ON e.id = es.expense_id
+        LEFT JOIN participants p ON es.participant_id = p.id
+        WHERE e.id = $1
+        GROUP BY e.id
+      `, [id]);
+      
+      if (result.rows.length === 0) {
+        throw new GraphQLError('Expense not found');
+      }
+      
+      const expense = result.rows[0];
+      return {
+        ...expense,
+        groupId: expense.group_id,
+        paidBy: expense.paid_by,
+        expenseDate: expense.expense_date
+      };
+    },
+
+    analytics: async (_: any, args: any, context: any) => {
+      requireAuth(context);
+      const { groupId, participantId, from, to } = args;
+
+      // Build base conditions
+      const conditions = [];
+      const params = [];
+      let paramIndex = 1;
+
+      if (groupId) {
+        conditions.push(`group_id = $${paramIndex++}`);
+        params.push(groupId);
+      }
+      if (participantId) {
+        conditions.push(`paid_by = $${paramIndex++}`);
+        params.push(participantId);
+      }
+      if (from) {
+        conditions.push(`expense_date >= $${paramIndex++}`);
+        params.push(from);
+      }
+      if (to) {
+        conditions.push(`expense_date <= $${paramIndex++}`);
+        params.push(to);
+      }
+
+      const whereClause = conditions.length > 0 ? ' WHERE ' + conditions.join(' AND ') : '';
+
+      // Category breakdown
+      const categoryResult = await db.query(`
+        SELECT 
+          category,
+          SUM(amount) as amount,
+          COUNT(*) as count
+        FROM expenses
+        ${whereClause} AND type = 'expense'
+        GROUP BY category
+        ORDER BY amount DESC
+      `, params);
+
+      const totalExpense = categoryResult.rows.reduce((sum, row) => sum + parseFloat(row.amount), 0);
+      const categoryBreakdown = categoryResult.rows.map(row => ({
+        category: row.category,
+        amount: parseFloat(row.amount),
+        percentage: totalExpense > 0 ? (parseFloat(row.amount) / totalExpense) * 100 : 0
+      }));
+
+      // Monthly trends
+      const monthlyResult = await db.query(`
+        SELECT 
+          DATE_TRUNC('month', expense_date) as month,
+          SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income,
+          SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expense
+        FROM expenses
+        ${whereClause}
+        GROUP BY DATE_TRUNC('month', expense_date)
+        ORDER BY month ASC
+      `, params);
+
+      const monthlyTrends = monthlyResult.rows.map(row => ({
+        month: row.month.toISOString().substr(0, 7), // YYYY-MM format
+        income: parseFloat(row.income),
+        expense: parseFloat(row.expense),
+        balance: parseFloat(row.income) - parseFloat(row.expense)
+      }));
+
+      return {
+        categoryBreakdown,
+        monthlyTrends,
+        topExpenseCategories: categoryBreakdown.slice(0, 5)
+      };
+    },
   },
   Mutation: {
-    createParticipant: async (_: any, { name, email, mobile }: any) => {
+    register: async (_: any, { name, email, password }: any) => {
+      // Validate required fields
+      if (!name || !email || !password) {
+        throw new GraphQLError('Name, email, and password are required');
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        throw new GraphQLError('Please provide a valid email address');
+      }
+
+      // Validate password strength
+      if (password.length < 6) {
+        throw new GraphQLError('Password must be at least 6 characters long');
+      }
+
+      // Check if user already exists
+      const existingUser = await db.query(
+        'SELECT id FROM users WHERE email = $1',
+        [email.toLowerCase()]
+      );
+
+      if (existingUser.rows.length > 0) {
+        throw new GraphQLError('User with this email already exists');
+      }
+
+      // Hash password
+      const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+
+      // Create user
+      const result = await db.query(
+        'INSERT INTO users (name, email, password_hash) VALUES ($1, $2, $3) RETURNING id, name, email, created_at',
+        [name, email.toLowerCase(), passwordHash]
+      );
+
+      const user = result.rows[0];
+
+      // Generate JWT token
+      const token = sign(
+        { userId: user.id, email: user.email },
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRE } as SignOptions
+      ) as string;
+
+      return {
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          createdAt: user.created_at
+        },
+        token,
+        message: 'User registered successfully'
+      };
+    },
+
+    login: async (_: any, { email, password }: any) => {
+      // Validate required fields
+      if (!email || !password) {
+        throw new GraphQLError('Email and password are required');
+      }
+
+      // Find user by email
+      const result = await db.query(
+        'SELECT id, name, email, password_hash, created_at FROM users WHERE email = $1',
+        [email.toLowerCase()]
+      );
+
+      if (result.rows.length === 0) {
+        throw new GraphQLError('Invalid email or password');
+      }
+
+      const user = result.rows[0];
+
+      // Verify password
+      const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+      
+      if (!isPasswordValid) {
+        throw new GraphQLError('Invalid email or password');
+      }
+
+      // Generate JWT token
+      const token = sign(
+        { userId: user.id, email: user.email },
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRE } as SignOptions
+      ) as string;
+
+      // Update last login
+      await db.query(
+        'UPDATE users SET updated_at = CURRENT_TIMESTAMP WHERE id = $1',
+        [user.id]
+      );
+
+      return {
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          createdAt: user.created_at
+        },
+        token,
+        message: 'Login successful'
+      };
+    },
+
+    createParticipant: async (_: any, { name, email, mobile }: any, context: any) => {
+      requireAuth(context);
       const result = await db.query(
         'INSERT INTO participants (name, email, mobile) VALUES ($1, $2, $3) RETURNING *',
         [name, email, mobile]
       );
       return result.rows[0];
+    },
+
+    updateParticipant: async (_: any, { id, name, email, mobile }: any, context: any) => {
+      requireAuth(context);
+      
+      // Build dynamic update query
+      const updateFields = [];
+      const params = [];
+      let paramIndex = 1;
+
+      if (name !== undefined) {
+        updateFields.push(`name = $${paramIndex++}`);
+        params.push(name);
+      }
+      if (email !== undefined) {
+        updateFields.push(`email = $${paramIndex++}`);
+        params.push(email);
+      }
+      if (mobile !== undefined) {
+        updateFields.push(`mobile = $${paramIndex++}`);
+        params.push(mobile);
+      }
+
+      if (updateFields.length === 0) {
+        throw new GraphQLError('At least one field must be provided for update');
+      }
+
+      params.push(id);
+      const result = await db.query(
+        `UPDATE participants SET ${updateFields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${paramIndex} RETURNING *`,
+        params
+      );
+
+      if (result.rows.length === 0) {
+        throw new GraphQLError('Participant not found');
+      }
+
+      return result.rows[0];
+    },
+
+    deleteParticipant: async (_: any, { id }: any, context: any) => {
+      requireAuth(context);
+      const result = await db.query('DELETE FROM participants WHERE id = $1 RETURNING id', [id]);
+      return result.rows.length > 0;
     },
     
     createGroup: async (_: any, { name, description }: any) => {
