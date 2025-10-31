@@ -1,12 +1,15 @@
 {
   "scripts": {
-    "dev": "concurrently \"npm:dev:server\" \"npm:dev:client\"",
+    "dev": "concurrently \"npm:dev:server\" \"npm:web:dev\"",
     "dev:client": "vite",
     "dev:server": "npm --prefix server run dev",
     "build": "npm run build:client && npm run build:server",
     "build:client": "vite build",
     "build:server": "npm --prefix server run build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "web:dev": "npm --prefix next-app run dev",
+    "web:build": "npm --prefix next-app run build",
+    "web:start": "npm --prefix next-app run start"
   },
   "dependencies": {
     "@react-spring/three": "^9.7.3",
