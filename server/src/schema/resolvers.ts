@@ -122,12 +122,15 @@ export const resolvers: IResolvers = {
       const { groupId, participantId, from, to } = args;
       let query = `
         SELECT e.*, 
-               json_agg(
-                 json_build_object(
-                   'participant', json_build_object('id', p.id, 'name', p.name, 'email', p.email),
-                   'amount', es.amount,
-                   'settled', es.settled
-                 )
+               COALESCE(
+                 json_agg(
+                   json_build_object(
+                     'participant', json_build_object('id', p.id, 'name', p.name, 'email', p.email),
+                     'amount', es.amount,
+                     'settled', es.settled
+                   )
+                 ) FILTER (WHERE es.id IS NOT NULL),
+                 '[]'
                ) as splits
         FROM expenses e
         LEFT JOIN expense_splits es ON e.id = es.expense_id
@@ -218,12 +221,15 @@ export const resolvers: IResolvers = {
       requireAuth(context);
       const result = await db.query(`
         SELECT e.*, 
-               json_agg(
-                 json_build_object(
-                   'participant', json_build_object('id', p.id, 'name', p.name, 'email', p.email),
-                   'amount', es.amount,
-                   'settled', es.settled
-                 )
+               COALESCE(
+                 json_agg(
+                   json_build_object(
+                     'participant', json_build_object('id', p.id, 'name', p.name, 'email', p.email),
+                     'amount', es.amount,
+                     'settled', es.settled
+                   )
+                 ) FILTER (WHERE es.id IS NOT NULL),
+                 '[]'
                ) as splits
         FROM expenses e
         LEFT JOIN expense_splits es ON e.id = es.expense_id
@@ -356,6 +362,12 @@ export const resolvers: IResolvers = {
       );
 
       const user = result.rows[0];
+
+      // Create a participant for this user (for expense tracking)
+      await db.query(
+        'INSERT INTO participants (name, email) VALUES ($1, $2) ON CONFLICT (email) DO NOTHING',
+        [name, email.toLowerCase()]
+      );
 
       // Generate JWT token
       const token = sign(
@@ -576,7 +588,206 @@ export const resolvers: IResolvers = {
       }
     },
     
-    settleSplit: async (_: any, { expenseId, participantId }: any) => {
+    updateExpense: async (_: any, { id, input }: any, context: any) => {
+      requireAuth(context);
+      const client = await db.getClient();
+      
+      try {
+        await client.query('BEGIN');
+        
+        // Update expense
+        const expenseResult = await client.query(
+          'UPDATE expenses SET group_id = $1, paid_by = $2, amount = $3, category = $4, description = $5, expense_date = $6, type = $7, updated_at = CURRENT_TIMESTAMP WHERE id = $8 RETURNING *',
+          [input.groupId, input.paidBy, input.amount, input.category, input.description, input.expenseDate, input.type, id]
+        );
+        
+        if (expenseResult.rows.length === 0) {
+          throw new GraphQLError('Expense not found');
+        }
+        
+        const expense = expenseResult.rows[0];
+        
+        // Delete old splits
+        await client.query('DELETE FROM expense_splits WHERE expense_id = $1', [id]);
+        
+        // Insert new splits
+        for (const split of input.splits) {
+          await client.query(
+            'INSERT INTO expense_splits (expense_id, participant_id, amount) VALUES ($1, $2, $3)',
+            [expense.id, split.participantId, split.amount]
+          );
+        }
+        
+        await client.query('COMMIT');
+        
+        // Return expense with splits
+        const result = await db.query(`
+          SELECT e.*, 
+                 COALESCE(
+                   json_agg(
+                     json_build_object(
+                       'participant', json_build_object('id', p.id, 'name', p.name, 'email', p.email),
+                       'amount', es.amount,
+                       'settled', es.settled
+                     )
+                   ) FILTER (WHERE es.id IS NOT NULL),
+                   '[]'
+                 ) as splits
+          FROM expenses e
+          LEFT JOIN expense_splits es ON e.id = es.expense_id
+          LEFT JOIN participants p ON es.participant_id = p.id
+          WHERE e.id = $1
+          GROUP BY e.id
+        `, [expense.id]);
+        
+        const returnExpense = result.rows[0];
+        return {
+          ...returnExpense,
+          groupId: returnExpense.group_id,
+          paidBy: returnExpense.paid_by,
+          expenseDate: returnExpense.expense_date
+        };
+        
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+      } finally {
+        client.release();
+      }
+    },
+
+    deleteExpense: async (_: any, { id }: any, context: any) => {
+      requireAuth(context);
+      const client = await db.getClient();
+      
+      try {
+        await client.query('BEGIN');
+        
+        // Delete expense splits first (foreign key constraint)
+        await client.query('DELETE FROM expense_splits WHERE expense_id = $1', [id]);
+        
+        // Delete expense
+        const result = await client.query('DELETE FROM expenses WHERE id = $1 RETURNING id', [id]);
+        
+        await client.query('COMMIT');
+        
+        return result.rows.length > 0;
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+      } finally {
+        client.release();
+      }
+    },
+    
+    updateGroup: async (_: any, { id, name, description }: any, context: any) => {
+      requireAuth(context);
+      
+      // Build dynamic update query
+      const updateFields = [];
+      const params = [];
+      let paramIndex = 1;
+
+      if (name !== undefined) {
+        updateFields.push(`name = $${paramIndex++}`);
+        params.push(name);
+      }
+      if (description !== undefined) {
+        updateFields.push(`description = $${paramIndex++}`);
+        params.push(description);
+      }
+
+      if (updateFields.length === 0) {
+        throw new GraphQLError('At least one field must be provided for update');
+      }
+
+      params.push(id);
+      const result = await db.query(
+        `UPDATE groups SET ${updateFields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${paramIndex} RETURNING *`,
+        params
+      );
+
+      if (result.rows.length === 0) {
+        throw new GraphQLError('Group not found');
+      }
+
+      // Get group with members
+      const groupResult = await db.query(`
+        SELECT g.*, 
+               COALESCE(
+                 json_agg(
+                   json_build_object('id', p.id, 'name', p.name, 'email', p.email, 'mobile', p.mobile)
+                 ) FILTER (WHERE p.id IS NOT NULL), 
+                 '[]'
+               ) as members
+        FROM groups g
+        LEFT JOIN group_members gm ON g.id = gm.group_id
+        LEFT JOIN participants p ON gm.participant_id = p.id
+        WHERE g.id = $1
+        GROUP BY g.id
+      `, [id]);
+
+      return groupResult.rows[0];
+    },
+
+    deleteGroup: async (_: any, { id }: any, context: any) => {
+      requireAuth(context);
+      const client = await db.getClient();
+      
+      try {
+        await client.query('BEGIN');
+        
+        // Delete group members first (foreign key constraint)
+        await client.query('DELETE FROM group_members WHERE group_id = $1', [id]);
+        
+        // Delete group
+        const result = await client.query('DELETE FROM groups WHERE id = $1 RETURNING id', [id]);
+        
+        await client.query('COMMIT');
+        
+        return result.rows.length > 0;
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+      } finally {
+        client.release();
+      }
+    },
+
+    removeParticipantFromGroup: async (_: any, { groupId, participantId }: any, context: any) => {
+      requireAuth(context);
+      
+      // Remove participant from group
+      await db.query(
+        'DELETE FROM group_members WHERE group_id = $1 AND participant_id = $2',
+        [groupId, participantId]
+      );
+      
+      // Return group with updated members
+      const result = await db.query(`
+        SELECT g.*, 
+               COALESCE(
+                 json_agg(
+                   json_build_object('id', p.id, 'name', p.name, 'email', p.email, 'mobile', p.mobile)
+                 ) FILTER (WHERE p.id IS NOT NULL), 
+                 '[]'
+               ) as members
+        FROM groups g
+        LEFT JOIN group_members gm ON g.id = gm.group_id
+        LEFT JOIN participants p ON gm.participant_id = p.id
+        WHERE g.id = $1
+        GROUP BY g.id
+      `, [groupId]);
+      
+      if (result.rows.length === 0) {
+        throw new GraphQLError('Group not found');
+      }
+      
+      return result.rows[0];
+    },
+
+    settleSplit: async (_: any, { expenseId, participantId }: any, context: any) => {
+      requireAuth(context);
       await db.query(
         'UPDATE expense_splits SET settled = true, settled_at = CURRENT_TIMESTAMP WHERE expense_id = $1 AND participant_id = $2',
         [expenseId, participantId]
@@ -600,7 +811,7 @@ export const resolvers: IResolvers = {
       `, [expenseId]);
       
       if (result.rows.length === 0) {
-        throw new Error('Expense not found');
+        throw new GraphQLError('Expense not found');
       }
       
       const expense = result.rows[0];

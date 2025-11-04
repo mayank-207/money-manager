@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, Link } from 'react-router-dom';
-import { Menu, X, LayoutDashboard, Receipt, ChartBar as BarChart3, Users } from 'lucide-react';
+import { useLocation, Link, useNavigate } from 'react-router-dom';
+import { Menu, X, LayoutDashboard, Receipt, ChartBar as BarChart3, Users, LogOut, User } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -22,6 +25,11 @@ const Header: React.FC = () => {
 
   const closeMenu = () => {
     setIsMenuOpen(false);
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
   };
 
   const navLinks = [
@@ -47,7 +55,7 @@ const Header: React.FC = () => {
           </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex space-x-8">
+          <nav className="hidden md:flex space-x-8 items-center">
             {navLinks.map((link) => (
               <Link
                 key={link.path}
@@ -62,6 +70,23 @@ const Header: React.FC = () => {
                 <span>{link.label}</span>
               </Link>
             ))}
+            
+            {/* User Info and Logout */}
+            {user && (
+              <div className="flex items-center space-x-4 ml-4 pl-4 border-l border-gray-200">
+                <div className="flex items-center space-x-2 text-sm">
+                  <User size={16} className="text-gray-600" />
+                  <span className="text-gray-700 font-medium">{user.name}</span>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  <LogOut size={18} />
+                  <span>Logout</span>
+                </button>
+              </div>
+            )}
           </nav>
 
           {/* Mobile menu button */}
@@ -103,6 +128,28 @@ const Header: React.FC = () => {
               <span>{link.label}</span>
             </Link>
           ))}
+          
+          {/* Mobile User Info and Logout */}
+          {user && (
+            <>
+              <div className="px-3 py-3 border-t border-gray-200">
+                <div className="flex items-center space-x-2 text-sm text-gray-700">
+                  <User size={16} className="text-gray-600" />
+                  <span className="font-medium">{user.name}</span>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  closeMenu();
+                  handleLogout();
+                }}
+                className="w-full flex items-center space-x-3 px-3 py-3 rounded-md text-base font-medium text-red-600 hover:bg-red-50 transition-colors"
+              >
+                <LogOut size={18} />
+                <span>Logout</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
     </header>

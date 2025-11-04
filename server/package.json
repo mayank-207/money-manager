@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc -p tsconfig.json",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "db:recreate": "node recreate-tables.js",
+    "db:check": "node check-schema.js",
+    "db:test": "node test-database.js"
   },
   "dependencies": {
     "@graphql-tools/utils": "^10.9.1",

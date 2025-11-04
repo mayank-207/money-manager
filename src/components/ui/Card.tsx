@@ -13,15 +13,15 @@ const Card: React.FC<CardProps> = ({ children, title, className = '' }) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      whileHover={{ scale: 1.02 }}
-      className={`bg-white rounded-xl shadow-lg backdrop-blur-lg p-6 ${className}`}
+      whileHover={{ scale: 1.01 }}
+      className={`bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 p-6 ${className}`}
     >
       {title && (
         <motion.h3
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
-          className="text-xl font-semibold mb-4 text-[#1D1D1F]"
+          className="text-xl font-bold mb-5 bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent"
         >
           {title}
         </motion.h3>

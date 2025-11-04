@@ -18,6 +18,7 @@ export interface Category {
 export interface MonthlySpending {
   month: string;
   amount: number;
+  date: Date;
 }
 
 export interface CategorySpending {

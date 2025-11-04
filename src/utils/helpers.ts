@@ -62,29 +62,83 @@ export const getMonthlySpending = (
     (transaction) => transaction.type === 'expense'
   );
 
-  const monthlyAmounts: { [key: string]: number } = {};
+  const monthlyAmounts: { [key: string]: { amount: number; date: Date } } = {};
 
   expenseTransactions.forEach((transaction) => {
     const date = new Date(transaction.date);
-    const monthYear = `${date.getFullYear()}-${date.getMonth() + 1}`;
+    const monthYear = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
     
     if (monthlyAmounts[monthYear]) {
-      monthlyAmounts[monthYear] += transaction.amount;
+      monthlyAmounts[monthYear].amount += transaction.amount;
     } else {
-      monthlyAmounts[monthYear] = transaction.amount;
+      monthlyAmounts[monthYear] = {
+        amount: transaction.amount,
+        date: new Date(date.getFullYear(), date.getMonth(), 1)
+      };
     }
   });
 
   return Object.entries(monthlyAmounts)
-    .map(([monthYear, amount]) => {
-      const [year, month] = monthYear.split('-');
-      const date = new Date(parseInt(year), parseInt(month) - 1);
-      return {
-        month: new Intl.DateTimeFormat('en-US', { month: 'short' }).format(date),
-        amount,
+    .map(([, data]) => ({
+      month: new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(data.date),
+      amount: data.amount,
+      date: data.date
+    }))
+    .sort((a, b) => a.date.getTime() - b.date.getTime())
+    .slice(-12); // Show only last 12 months for better UI
+};
+
+// Get monthly spending data by category
+export const getMonthlyCategorySpending = (
+  transactions: Transaction[]
+): { month: string; categories: CategorySpending[]; total: number; date: Date }[] => {
+  const expenseTransactions = transactions.filter(
+    (transaction) => transaction.type === 'expense'
+  );
+
+  const monthlyData: { 
+    [key: string]: { 
+      categories: { [key: string]: number }; 
+      total: number; 
+      date: Date 
+    } 
+  } = {};
+
+  expenseTransactions.forEach((transaction) => {
+    const date = new Date(transaction.date);
+    const monthYear = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    
+    if (!monthlyData[monthYear]) {
+      monthlyData[monthYear] = {
+        categories: {},
+        total: 0,
+        date: new Date(date.getFullYear(), date.getMonth(), 1)
       };
-    })
-    .sort((a, b) => a.month.localeCompare(b.month));
+    }
+    
+    if (!monthlyData[monthYear].categories[transaction.category]) {
+      monthlyData[monthYear].categories[transaction.category] = 0;
+    }
+    
+    monthlyData[monthYear].categories[transaction.category] += transaction.amount;
+    monthlyData[monthYear].total += transaction.amount;
+  });
+
+  const categories = getDefaultCategories();
+
+  return Object.entries(monthlyData)
+    .map(([, data]) => ({
+      month: new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(data.date),
+      categories: Object.entries(data.categories).map(([category, amount]) => ({
+        category,
+        amount,
+        color: categories[category] || '#0A84FF'
+      })),
+      total: data.total,
+      date: data.date
+    }))
+    .sort((a, b) => a.date.getTime() - b.date.getTime())
+    .slice(-12); // Show only last 12 months for better UI
 };
 
 // Generate a unique ID
@@ -95,19 +149,19 @@ export const generateId = (): string => {
 // Get default categories with colors
 export const getDefaultCategories = (): { [key: string]: string } => {
   return {
-    'Food & Dining': '#30D158',
-    'Transportation': '#FF9F0A',
-    'Entertainment': '#5E5CE6',
-    'Housing': '#0A84FF',
-    'Utilities': '#FF453A',
-    'Healthcare': '#64D2FF',
-    'Shopping': '#BF5AF2',
-    'Personal': '#FF2D55',
-    'Education': '#FFD60A',
-    'Travel': '#30B0C7',
-    'Salary': '#30D158',
-    'Investment': '#5E5CE6',
-    'Gift': '#FF2D55',
-    'Other': '#86868B',
+    'Food & Dining': '#10b981',    // Emerald-500
+    'Transportation': '#f59e0b',   // Amber-500
+    'Entertainment': '#8b5cf6',    // Violet-500
+    'Housing': '#3b82f6',          // Blue-500
+    'Utilities': '#ef4444',        // Red-500
+    'Healthcare': '#06b6d4',       // Cyan-500
+    'Shopping': '#d946ef',         // Fuchsia-500
+    'Personal': '#ec4899',         // Pink-500
+    'Education': '#eab308',        // Yellow-500
+    'Travel': '#14b8a6',           // Teal-500
+    'Salary': '#22c55e',           // Green-500
+    'Investment': '#6366f1',       // Indigo-500
+    'Gift': '#f43f5e',             // Rose-500
+    'Other': '#64748b',            // Slate-500
   };
 };
